@@ -1,0 +1,7 @@
+= leveldb-clj
+
+A Clojure library to handle key-value store over LevelDB in blockchain projects.
+
+== License
+
+Distributed under the MIT license.
