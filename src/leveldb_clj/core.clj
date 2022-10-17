@@ -1,6 +1,6 @@
 (ns leveldb-clj.core
   (:require [leveldb-clj.kv :as kv]
-            [clojure.java.io  :as java.io])
+            [clojure.java.io :as java.io])
   (:import (org.iq80.leveldb.impl Iq80DBFactory)
            (org.iq80.leveldb Options)))
 
@@ -37,7 +37,10 @@
     (.delete db (outgoing-key codec k))
     this)
   (list-keys [this]
-    (.keySet db)))
+    (map
+      #(.getKey %)
+      (iterator-seq
+        (let [it (.iterator db)] (.seekToFirst it) it)))))
 
 (defn map->LevelDBStore [opts]
   (let [options (doto (Options.)
