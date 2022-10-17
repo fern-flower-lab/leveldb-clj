@@ -9,7 +9,9 @@
   (delete [store k]
     "Return a new store, without the given key.")
   (insert-batch [store k]
-    "Return a new store, with additional mappings."))
+    "Return a new store, with additional mappings.")
+  (list-keys [store]
+    "Returns a seq of keys existing in the store"))
 
 (extend-type IPersistentMap
   KeyValueStore
@@ -20,4 +22,6 @@
   (delete [m k]
     (dissoc m k))
   (insert-batch [m other]
-    (merge m other)))
+    (merge m other))
+  (list-keys [m]
+    (keys m)))

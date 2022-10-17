@@ -35,7 +35,9 @@
     (incoming-value codec (.get db (outgoing-key codec k))))
   (delete [this k]
     (.delete db (outgoing-key codec k))
-    this))
+    this)
+  (list-keys [this]
+    (.keySet db)))
 
 (defn map->LevelDBStore [opts]
   (let [options (doto (Options.)
