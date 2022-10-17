@@ -37,10 +37,10 @@
     (.delete db (outgoing-key codec k))
     this)
   (list-keys [this]
-    (map
-      #(.getKey %)
-      (iterator-seq
-        (let [it (.iterator db)] (.seekToFirst it) it)))))
+    (map #(.getKey %) (.stream this)))
+  (stream [this]
+    (iterator-seq
+      (let [it (.iterator db)] (.seekToFirst it) it))))
 
 (defn map->LevelDBStore [opts]
   (let [options (doto (Options.)

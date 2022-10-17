@@ -11,7 +11,9 @@
   (insert-batch [store k]
     "Return a new store, with additional mappings.")
   (list-keys [store]
-    "Returns a seq of keys existing in the store"))
+    "Returns a seq of keys existing in the store")
+  (stream [store]
+    "Returns sequence on KV pair"))
 
 (extend-type IPersistentMap
   KeyValueStore
@@ -24,4 +26,6 @@
   (insert-batch [m other]
     (merge m other))
   (list-keys [m]
-    (keys m)))
+    (keys m))
+  (stream [m]
+    (map (fn [[k v]] [k v]))))
