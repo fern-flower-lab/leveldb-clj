@@ -28,4 +28,4 @@
   (list-keys [m]
     (keys m))
   (stream [m]
-    (map (fn [[k v]] [k v]))))
+    (map (fn [[k v]] [k v]) m)))
