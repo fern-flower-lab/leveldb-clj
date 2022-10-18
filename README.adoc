@@ -1,6 +1,125 @@
 = leveldb-clj
 
-A Clojure library to handle key-value store over LevelDB in blockchain projects.
+A Clojure tiny and low-level library to handle key-value store at LevelDB for blockchain projects.
+
+image:https://img.shields.io/github/license/fern-flower-lab/leveldb-clj[GitHub]
+image:https://img.shields.io/clojars/v/ai.z7/leveldb-clj.svg[]
+image:https://img.shields.io/github/v/tag/fern-flower-lab/leveldb-clj[GitHub tag (latest by date)]
+image:https://img.shields.io/github/last-commit/fern-flower-lab/leveldb-clj[GitHub last commit]
+image:https://img.shields.io/github/v/release/fern-flower-lab/leveldb-clj[GitHub release (latest by date)]
+
+== Usage
+
+.leiningen project.clj
+[source,clojure]
+----
+...
+ :dependencies [[org.clojure/clojure "1.11.1"]
+...
+                [ai.z7/leveldb-clj "0.0.4"]]
+...
+----
+
+and then
+
+[source,clojure]
+----
+(ns my.application.ns
+  (:require [leveldb-clj.core :as leveldb]
+            [leveldb-clj.kv :as kv]
+            [leveldb-clj.tx :as tx]))
+
+;; regular interface designed for generic kv/* methods
+(defonce ^:private store
+  (leveldb/map->LevelDBStore {:path "mystore.level.db"}))
+
+;; atomic interface designed for transactional tx/* methods
+(defonce ^:private atomic-store
+  (tx/->LevelDB-TX store (atom {})))
+----
+
+That is - the store is ready!
+
+=== Generic interface
+
+[source, clojure]
+----
+test=> (def store (leveldb/map->LevelDBStore {:path "mystore.level.db"}))
+
+test=> (kv/insert store (.getBytes "eee") (.getBytes "fff"))
+; #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0x69957a8 "org.iq80.leveldb.impl.DbImpl@69957a8"], :codec nil}
+
+test=> (kv/list-keys store)
+; (#object["[B" 0x72b795cf "[B@72b795cf"])
+
+test=> (map #(String. %) (kv/list-keys store))
+; ("eee")
+
+test=> (kv/retrieve store (.getBytes "eee"))
+; #object["[B" 0x453ad576 "[B@453ad576"]
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+; "fff"
+
+test=> (kv/delete store (.getBytes "eee"))
+; #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0x69957a8 "org.iq80.leveldb.impl.DbImpl@69957a8"], :codec nil}
+
+test=> (map #(String. %) (kv/list-keys store))
+; ()
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+; Execution error (NullPointerException) at java.lang.String/<init> (String.java:1460).
+; Cannot invoke "java.lang.StringBuffer.toString()" because "buffer" is null
+
+----
+
+=== Transactional interface
+
+[source, clojure]
+----
+test=> (def atomic-store (tx/->LevelDB-TX store (atom {})))
+
+test=> (map #(String. %) (kv/list-keys store))
+; ()
+test=> (tx/add atomic-store (.getBytes "eee") (.getBytes "fff"))
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0x69957a8 "org.iq80.leveldb.impl.DbImpl@69957a8"], :codec nil}, :state #object[clojure.lang.Atom 0x3e85d3ce {:status :ready, :val {#object["[B" 0x38381caf "[B@38381caf"] #object["[B" 0x4b1aeb91 "[B@4b1aeb91"]}}]}
+
+test=> (map #(String. %) (kv/list-keys store))
+; ()
+
+test=> (tx/commit atomic-store)
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0x69957a8 "org.iq80.leveldb.impl.DbImpl@69957a8"], :codec nil}, :state #object[clojure.lang.Atom 0x3e85d3ce {:status :ready, :val {}}]}
+test=> (map #(String. %) (kv/list-keys store))
+; ("eee")
+
+(tx/add atomic-store (.getBytes "eee") (.getBytes "HHH"))
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0xb2e2921 "org.iq80.leveldb.impl.DbImpl@b2e2921"], :codec nil}, :state #object[clojure.lang.Atom 0x7d995254 {:status :ready, :val {#object["[B" 0x266702a9 "[B@266702a9"] #object["[B" 0x77cfe94e "[B@77cfe94e"]}}]}
+
+test=> (map #(String. %) (kv/list-keys store))
+; ("eee")
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+; "fff"
+
+test=> (tx/rollback atomic-store)
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0xb2e2921 "org.iq80.leveldb.impl.DbImpl@b2e2921"], :codec nil}, :state #object[clojure.lang.Atom 0x7d995254 {:status :ready, :val {}}]}
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+; "fff"
+
+test=> (tx/add atomic-store (.getBytes "eee") (.getBytes "HHH"))
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0xb2e2921 "org.iq80.leveldb.impl.DbImpl@b2e2921"], :codec nil}, :state #object[clojure.lang.Atom 0x7d995254 {:status :ready, :val {#object["[B" 0xe0570d "[B@e0570d"] #object["[B" 0x159a9133 "[B@159a9133"]}}]}
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+"fff"
+
+test=> (tx/commit atomic-store)
+; #leveldb_clj.tx.LevelDB-TX{:store #leveldb_clj.core.LevelDBStore{:db #object[org.iq80.leveldb.impl.DbImpl 0xb2e2921 "org.iq80.leveldb.impl.DbImpl@b2e2921"], :codec nil}, :state #object[clojure.lang.Atom 0x7d995254 {:status :ready, :val {}}]}
+
+test=> (String. (kv/retrieve store (.getBytes "eee")))
+; "HHH"
+
+----
 
 == License
 
