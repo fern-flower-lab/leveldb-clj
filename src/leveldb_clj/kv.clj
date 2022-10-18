@@ -8,7 +8,7 @@
     "Return a new store, with an additional `k` -> `v` mapping.")
   (delete [store k]
     "Return a new store, without the given key.")
-  (insert-batch [store k]
+  (insert-batch [store m]
     "Return a new store, with additional mappings.")
   (list-keys [store]
     "Returns a seq of keys existing in the store")

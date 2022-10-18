@@ -2,7 +2,7 @@
   (:require [leveldb-clj.kv :as kv]
             [clojure.java.io :as java.io])
   (:import (org.iq80.leveldb.impl Iq80DBFactory)
-           (org.iq80.leveldb Options)))
+           (org.iq80.leveldb Options WriteBatch)))
 
 (defprotocol LevelDBCodec
   (outgoing-key [_ k])
@@ -23,7 +23,7 @@
     (.put db (outgoing-key codec k) (outgoing-value codec v))
     this)
   (insert-batch [this m]
-    (let [batch (.createWriteBatch db)]
+    (let [batch ^WriteBatch (.createWriteBatch db)]
       (try
         (doseq [[k v] m]
           (.put batch (outgoing-key codec k) (outgoing-value codec v)))
