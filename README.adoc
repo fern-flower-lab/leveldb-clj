@@ -2,11 +2,11 @@
 
 A Clojure tiny and low-level library to handle key-value store at LevelDB for blockchain projects.
 
-image:https://img.shields.io/github/license/fern-flower-lab/leveldb-clj[GitHub]
-image:https://img.shields.io/clojars/v/ai.z7/leveldb-clj.svg[]
-image:https://img.shields.io/github/v/tag/fern-flower-lab/leveldb-clj[GitHub tag (latest by date)]
-image:https://img.shields.io/github/last-commit/fern-flower-lab/leveldb-clj[GitHub last commit]
-image:https://img.shields.io/github/v/release/fern-flower-lab/leveldb-clj[GitHub release (latest by date)]
+image:https://img.shields.io/github/license/fern-flower-lab/leveldb-clj?style=for-the-badge[GitHub]
+image:https://img.shields.io/clojars/v/ai.z7/leveldb-clj.svg?style=for-the-badge[]
+image:https://img.shields.io/github/v/tag/fern-flower-lab/leveldb-clj?style=for-the-badge[GitHub tag (latest by date)]
+image:https://img.shields.io/github/last-commit/fern-flower-lab/leveldb-clj?style=for-the-badge[GitHub last commit]
+image:https://img.shields.io/github/v/release/fern-flower-lab/leveldb-clj?style=for-the-badge[GitHub release (latest by date)]
 
 == Usage
 
