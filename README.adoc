@@ -16,7 +16,7 @@ image:https://img.shields.io/github/v/release/fern-flower-lab/leveldb-clj?style=
 ...
  :dependencies [[org.clojure/clojure "1.11.1"]
 ...
-                [ai.z7/leveldb-clj "0.0.4"]]
+                [ai.z7/leveldb-clj "0.0.6"]]
 ...
 ----
 
@@ -39,6 +39,32 @@ and then
 ----
 
 That is - the store is ready!
+
+=== Resource Management
+
+The store implements `java.io.Closeable`. Always close the store when done:
+
+[source, clojure]
+----
+;; Using with-open for automatic cleanup
+(with-open [store (leveldb/map->LevelDBStore {:path "mystore.level.db"})]
+  (kv/insert store (.getBytes "key") (.getBytes "value"))
+  (kv/retrieve store (.getBytes "key")))
+
+;; Or manually close when done
+(.close store)
+----
+
+The `stream` function also returns a `Closeable` sequence. Use `with-open` when iterating:
+
+[source, clojure]
+----
+(with-open [s (kv/stream store)]
+  (doseq [entry s]
+    (println (String. (.getKey entry)))))
+----
+
+Note: `list-keys` handles closing automatically.
 
 === Generic interface
 

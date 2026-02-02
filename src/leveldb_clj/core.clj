@@ -2,7 +2,8 @@
   (:require [leveldb-clj.kv :as kv]
             [clojure.java.io :as java.io])
   (:import (org.iq80.leveldb.impl Iq80DBFactory)
-           (org.iq80.leveldb Options WriteBatch)))
+           (org.iq80.leveldb Options WriteBatch DBIterator)
+           (java.io Closeable)))
 
 (defprotocol LevelDBCodec
   (outgoing-key [_ k])
@@ -16,6 +17,24 @@
   (incoming-key [_ k] k)
   (outgoing-value [_ v] v)
   (incoming-value [_ v] v))
+
+(deftype CloseableIteratorSeq [^DBIterator iterator seq-val]
+  clojure.lang.Seqable
+  (seq [_] seq-val)
+  clojure.lang.ISeq
+  (first [_] (first seq-val))
+  (next [_] (next seq-val))
+  (more [_] (rest seq-val))
+  (cons [_ o] (cons o seq-val))
+  Closeable
+  (close [_] (.close iterator)))
+
+(defn- closeable-iterator-seq
+  "Returns a Closeable sequence backed by the iterator.
+   Caller should close when done, e.g., with `with-open`."
+  [^DBIterator it]
+  (.seekToFirst it)
+  (->CloseableIteratorSeq it (iterator-seq it)))
 
 (defrecord LevelDBStore [db codec]
   kv/KeyValueStore
@@ -37,10 +56,12 @@
     (.delete db (outgoing-key codec k))
     this)
   (list-keys [this]
-    (map #(.getKey %) (.stream this)))
+    (with-open [s (kv/stream this)]
+      (doall (map #(.getKey %) s))))
   (stream [this]
-    (iterator-seq
-      (let [it (.iterator db)] (.seekToFirst it) it))))
+    (closeable-iterator-seq (.iterator db)))
+  Closeable
+  (close [_] (.close db)))
 
 (defn map->LevelDBStore [opts]
   (let [options (doto (Options.)

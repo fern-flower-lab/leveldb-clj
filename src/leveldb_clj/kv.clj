@@ -1,5 +1,6 @@
 (ns leveldb-clj.kv
-  (:import (clojure.lang IPersistentMap)))
+  (:import (clojure.lang IPersistentMap)
+           (java.io Closeable)))
 
 (defprotocol KeyValueStore
   (retrieve [store k]
@@ -13,7 +14,18 @@
   (list-keys [store]
     "Returns a seq of keys existing in the store")
   (stream [store]
-    "Returns sequence on KV pair"))
+    "Returns a Closeable sequence of KV pairs. Caller should close when done."))
+
+(deftype CloseableSeq [seq-val]
+  clojure.lang.Seqable
+  (seq [_] seq-val)
+  clojure.lang.ISeq
+  (first [_] (first seq-val))
+  (next [_] (next seq-val))
+  (more [_] (rest seq-val))
+  (cons [_ o] (cons o seq-val))
+  Closeable
+  (close [_] nil))
 
 (extend-type IPersistentMap
   KeyValueStore
@@ -28,4 +40,4 @@
   (list-keys [m]
     (keys m))
   (stream [m]
-    (map (fn [[k v]] [k v]) m)))
+    (->CloseableSeq (map (fn [[k v]] [k v]) m))))
