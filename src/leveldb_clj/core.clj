@@ -21,20 +21,15 @@
 (deftype CloseableIteratorSeq [^DBIterator iterator seq-val]
   clojure.lang.Seqable
   (seq [_] seq-val)
-  clojure.lang.ISeq
-  (first [_] (first seq-val))
-  (next [_] (next seq-val))
-  (more [_] (rest seq-val))
-  (cons [_ o] (cons o seq-val))
   Closeable
   (close [_] (.close iterator)))
 
 (defn- closeable-iterator-seq
   "Returns a Closeable sequence backed by the iterator.
    Caller should close when done, e.g., with `with-open`."
-  [^DBIterator it]
+  [^DBIterator it f]
   (.seekToFirst it)
-  (->CloseableIteratorSeq it (iterator-seq it)))
+  (->CloseableIteratorSeq it (map f (iterator-seq it))))
 
 (defrecord LevelDBStore [db codec]
   kv/KeyValueStore
@@ -57,9 +52,15 @@
     this)
   (list-keys [this]
     (with-open [s (kv/stream this)]
-      (doall (map #(.getKey %) s))))
+      (if-let [entries (seq s)]
+        (doall (map first entries))
+        '())))
   (stream [this]
-    (closeable-iterator-seq (.iterator db)))
+    (closeable-iterator-seq
+      (.iterator db)
+      (fn [entry]
+        [(incoming-key codec (.getKey entry))
+         (incoming-value codec (.getValue entry))])))
   Closeable
   (close [_] (.close db)))
 

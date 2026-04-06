@@ -60,11 +60,13 @@ The `stream` function also returns a `Closeable` sequence. Use `with-open` when 
 [source, clojure]
 ----
 (with-open [s (kv/stream store)]
-  (doseq [entry s]
-    (println (String. (.getKey entry)))))
+  (doseq [[k v] s]
+    (println (String. k) (String. v))))
 ----
 
 Note: `list-keys` handles closing automatically.
+
+When a `:codec` is provided, it is applied consistently for `retrieve`, `list-keys`, and `stream`.
 
 === Generic interface
 

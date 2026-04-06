@@ -39,6 +39,12 @@
       (is (.equals b1 b2))
       (is (not (.equals b1 b3))))))
 
+(deftest binary-equality-with-foreign-type-test
+  (testing "Binary equality returns false for non-Binary values"
+    (let [b (tx/->Binary (.getBytes "test"))]
+      (is (false? (.equals b "test")))
+      (is (false? (.equals b nil))))))
+
 (deftest binary-hashcode-test
   (testing "Binary has content-based hashCode"
     (let [b1 (tx/->Binary (.getBytes "test"))
@@ -97,6 +103,14 @@
       (is (nil? (kv/retrieve *store* (.getBytes "k1"))))
       ;; k2 was committed
       (is (= "v2" (String. (kv/retrieve *store* (.getBytes "k2"))))))))
+
+(deftest transaction-del-persisted-key-test
+  (testing "del removes an already-persisted key on commit"
+    (kv/insert *store* (.getBytes "k1") (.getBytes "v1"))
+    (let [atomic (tx/->LevelDB-TX *store* (atom {}))]
+      (tx/del atomic (.getBytes "k1"))
+      (tx/commit atomic)
+      (is (nil? (kv/retrieve *store* (.getBytes "k1")))))))
 
 (deftest transaction-isolation-test
   (testing "uncommitted changes are isolated from store reads"

@@ -19,11 +19,6 @@
 (deftype CloseableSeq [seq-val]
   clojure.lang.Seqable
   (seq [_] seq-val)
-  clojure.lang.ISeq
-  (first [_] (first seq-val))
-  (next [_] (next seq-val))
-  (more [_] (rest seq-val))
-  (cons [_ o] (cons o seq-val))
   Closeable
   (close [_] nil))
 

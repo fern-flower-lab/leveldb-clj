@@ -64,13 +64,31 @@
       (is (contains? keys "y")))))
 
 (deftest leveldb-store-stream-test
-  (testing "stream returns closeable sequence"
+  (testing "stream returns closeable sequence of key/value pairs"
     (kv/insert *store* (.getBytes "k1") (.getBytes "v1"))
     (with-open [s (kv/stream *store*)]
       (let [entries (doall (seq s))]
         (is (= 1 (count entries)))
-        (is (= "k1" (String. (.getKey (first entries)))))
-        (is (= "v1" (String. (.getValue (first entries)))))))))
+        (is (= ["k1" "v1"]
+               (mapv #(String. %) (first entries))))))))
+
+(deftest leveldb-store-codec-test
+  (testing "codec is applied consistently across reads and iteration"
+    (let [codec (reify leveldb_clj.core.LevelDBCodec
+                  (outgoing-key [_ k] (.getBytes (str "key:" k)))
+                  (incoming-key [_ k] (subs (String. k) 4))
+                  (outgoing-value [_ v] (.getBytes (str "val:" v)))
+                  (incoming-value [_ v] (subs (String. v) 4)))
+          path (str "target/test-codec-" (System/currentTimeMillis))]
+      (try
+        (with-open [store (leveldb/map->LevelDBStore {:path path :codec codec})]
+          (kv/insert store "a" "b")
+          (is (= "b" (kv/retrieve store "a")))
+          (is (= ["a"] (vec (kv/list-keys store))))
+          (with-open [s (kv/stream store)]
+            (is (= [["a" "b"]] (vec (seq s))))))
+        (finally
+          (delete-recursively (io/file path)))))))
 
 (deftest leveldb-store-closeable-test
   (testing "store can be closed"

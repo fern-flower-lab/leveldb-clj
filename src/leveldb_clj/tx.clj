@@ -13,18 +13,39 @@
 (defprotocol IComparable (equals [_ o1 o2]))
 (defprotocol IConvertable (raw [_]))
 
+(def ^:private deleted ::deleted)
+
 (deftype Binary [o]
   Object
-  (equals [_ o2] (Arrays/equals ^bytes o ^bytes (raw o2)))
+  (equals [_ o2]
+    (and (instance? Binary o2)
+         (Arrays/equals ^bytes o ^bytes (raw o2))))
   (hashCode [_] (Arrays/hashCode ^bytes o))
   (toString [_] (str o))
   IComparable
-  (equals [_ o1 o2] (Arrays/equals ^bytes (raw o1) ^bytes (raw o2)))
+  (equals [_ o1 o2]
+    (and (instance? Binary o1)
+         (instance? Binary o2)
+         (Arrays/equals ^bytes (raw o1) ^bytes (raw o2))))
   IConvertable
   (raw [_] o))
 
-(defn- extract-state [[state _]]
-  (into {} (map (fn [[k v]] [(.raw k) (.raw v)]) state)))
+(defn- commit-state [store state]
+  (let [puts (reduce-kv
+               (fn [acc k v]
+                 (if (= deleted v)
+                   acc
+                   (assoc acc (.raw k) (.raw v))))
+               {}
+               state)
+        deletes (keep (fn [[k v]]
+                        (when (= deleted v)
+                          (.raw k)))
+                      state)]
+    (doseq [k deletes]
+      (kv/delete store k))
+    (when (seq puts)
+      (kv/insert-batch store puts))))
 
 (defrecord LevelDB-TX [store state]
   ITransactional
@@ -32,6 +53,8 @@
   (add-batch [this m]
     (swap! state merge (into {} (map (fn [[k v]] [(->Binary k) (->Binary v)]) m)))
     this)
-  (del [this k] (swap! state dissoc (->Binary k)) this)
-  (commit [this] (kv/insert-batch store (extract-state (swap-vals! state (constantly {})))) this)
+  (del [this k] (swap! state assoc (->Binary k) deleted) this)
+  (commit [this]
+    (commit-state store (first (swap-vals! state (constantly {}))))
+    this)
   (rollback [this] (reset! state {}) this))
